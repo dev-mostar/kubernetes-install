@@ -30,7 +30,7 @@ kubeadm config print init-defaults | tee ClusterConfiguration.yaml
 #4. Edit kubernetesVersion to match the version you installed in 0-PackageInstallation-containerd.sh
 
 #Change the address of the localAPIEndpoint.advertiseAddress to the Control Plane Node's IP address
-sed -i 's/  advertiseAddress: 1.2.3.4/  advertiseAddress: 172.16.94.10/' ClusterConfiguration.yaml
+sed -i 's/  advertiseAddress: 1.2.3.4/  advertiseAddress: NODE_IP/' ClusterConfiguration.yaml
 
 
 #Set the CRI Socket to point to containerd
