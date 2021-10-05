@@ -3,6 +3,10 @@
 #   2. Static IPs on individual VMs
 #   3. /etc/hosts hosts file includes name to IP mappings for VMs
 #   4. Swap is disabled
+#   5. Take snapshots prior to installation, this way you can install 
+#       and revert to snapshot if needed 
+#
+ssh aen@c1-cp1
 
 
 #0 - Disable swap, swapoff then edit your fstab removing any entry for swap partitions
@@ -10,8 +14,17 @@
 swapoff -a
 vi /etc/fstab
 
+
+###IMPORTANT####
+#I expect this code to change a bit to make the installation process more streamlined.
+#Overall, the end result will stay the same...you'll have continerd installed
+#I will keep the code in the course downloads up to date with the latest method.
+################
+
+
 #0 - Install Packages 
 #containerd prerequisites, first load two modules and configure them to load on boot
+#https://kubernetes.io/docs/setup/production-environment/container-runtimes/
 sudo modprobe overlay
 sudo modprobe br_netfilter
 
@@ -43,11 +56,16 @@ sudo mkdir -p /etc/containerd
 sudo containerd config default | sudo tee /etc/containerd/config.toml
 
 
+#Set the cgroup driver for containerd to systemd which is required for the kubelet.
+#For more information on this config file see:
+# https://github.com/containerd/cri/blob/master/docs/config.md and also
+# https://github.com/containerd/containerd/blob/master/docs/ops.md
+
 #At the end of this section
         [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
         ...
-#Add these two lines, indentation matters.
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+#UPDATE: This line is now in the config.toml file
+#change it from SystemdCgroup = false to SystemdCgroup = true
             SystemdCgroup = true
 
 sudo vi /etc/containerd/config.toml
@@ -55,6 +73,8 @@ sudo vi /etc/containerd/config.toml
 
 #Restart containerd with the new configuration
 sudo systemctl restart containerd
+
+
 
 
 #Install Kubernetes packages - kubeadm, kubelet and kubectl
@@ -75,9 +95,14 @@ apt-cache policy kubelet | head -n 20
 
 #Install the required packages, if needed we can request a specific version. 
 #Use this version because in a later course we will upgrade the cluster to a newer version.
-VERSION=1.20.1-00
+VERSION=1.21.0-00
 sudo apt-get install -y kubelet=$VERSION kubeadm=$VERSION kubectl=$VERSION
 sudo apt-mark hold kubelet kubeadm kubectl containerd
+
+#There is a breaking change in kubernetes 1.22, I will update the course shortly for that change for now use versions less than 1.22
+#To install the latest, omit the version parameters
+#sudo apt-get install kubelet kubeadm kubectl
+#sudo apt-mark hold kubelet kubeadm kubectl containerd
 
 
 #1 - systemd Units

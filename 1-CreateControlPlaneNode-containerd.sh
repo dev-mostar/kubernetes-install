@@ -2,6 +2,7 @@
 #If you are using containerd, make sure docker isn't installed. 
 #kubeadm init will try to auto detect the container runtime and at the moment 
 #it if both are installed it will pick docker first.
+ssh aen@c1-cp1
 
 
 #0 - Creating a Cluster
@@ -28,14 +29,16 @@ kubeadm config print init-defaults | tee ClusterConfiguration.yaml
 #2. nodeRegistration.criSocket from docker to containerd
 #3. Set the cgroup driver for the kubelet to systemd, it's not set in this file yet, the default is cgroupfs
 #4. Edit kubernetesVersion to match the version you installed in 0-PackageInstallation-containerd.sh
+#5. Update the node name from node to the actual control plane node name, c1-cp1
 
 #Change the address of the localAPIEndpoint.advertiseAddress to the Control Plane Node's IP address
-sed -i 's/  advertiseAddress: 1.2.3.4/  advertiseAddress: NODE_IP/' ClusterConfiguration.yaml
-
+sed -i 's/  advertiseAddress: 1.2.3.4/  advertiseAddress: 10.1.0.4/' ClusterConfiguration.yaml
 
 #Set the CRI Socket to point to containerd
 sed -i 's/  criSocket: \/var\/run\/dockershim\.sock/  criSocket: \/run\/containerd\/containerd\.sock/' ClusterConfiguration.yaml
 
+#UPDATE: Added configuration to set the node name for the control plane node to the actual hostname
+sed -i 's/  name: node/  name: kmaster/' ClusterConfiguration.yaml
 
 #Set the cgroupDriver to systemd...matching that of your container runtime, containerd
 cat <<EOF | cat >> ClusterConfiguration.yaml
@@ -47,7 +50,7 @@ EOF
 
 
 #Review the Cluster configuration file, update the version to match what you've installed. 
-#We're using 1.20.1...if you're using a newer version update that here.
+#We're using 1.21.0...if you're using a newer version update that here.
 vi ClusterConfiguration.yaml
 
 
@@ -70,7 +73,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 
 #1 - Creating a Pod Network
-#Deploy yaml file for your pod network.
+#Deploy yaml file for your pod network. #May print a warning about PodDisruptionBudget it is safe to ignore for now.
 kubectl apply -f calico.yaml
 
 
@@ -89,6 +92,8 @@ kubectl get pods --all-namespaces
 
 #Get a list of our current nodes, just the Control Plane Node/Master Node...should be Ready.
 kubectl get nodes 
+
+
 
 
 #2 - systemd Units...again!
